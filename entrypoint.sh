@@ -44,9 +44,11 @@ function find_cmd() {
     local -n cmd="$3"
     
     cmd+="find . -type f "
-    for exclude in $excludes; do
-        cmd+="! -wholename \"./$exclude\" "
-    done
+    if [ -n "$excludes" ]; then
+        for exclude in $excludes; do
+            cmd+="! -wholename \"./$exclude\" "
+        done
+    fi
 
     cmd+="\( "
     local is_first=1
@@ -66,8 +68,12 @@ function main() {
     log "Action started"
     resolve_inputs
     log "Sources to check: $INPUT_SOURCES"
-    log "Excluding: $INPUT_EXCLUDES\n"
-    find_cmd $INPUT_SOURCES $INPUT_EXCLUDES FIND_CMD
+    if [ -n "$INPUT_EXCLUDES" ]; then
+        log "Excluding: $INPUT_EXCLUDES"
+        find_cmd "$INPUT_SOURCES" "$INPUT_EXCLUDES" FIND_CMD
+    else
+        find_cmd "$INPUT_SOURCES" "" FIND_CMD
+    fi
 
     for file in $(eval $FIND_CMD); do
         log "Checking file: $file"
@@ -87,7 +93,7 @@ function main() {
             if [ $i -ne 0 ]; then
                 echo -n " && "
             fi
-            echo "clang-format -style=file -i "${PROBLEMETIC_FILES[$i]}" \\"
+            echo "clang-format $STYLE -i "${PROBLEMETIC_FILES[$i]}" \\"
         done
         exit 1
     fi
